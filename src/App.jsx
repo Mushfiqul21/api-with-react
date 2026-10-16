@@ -1,18 +1,45 @@
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import api from "./api/axios";
 
 function App() {
   const [users, setUsers] = useState([]);
-  useEffect(() => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { register, handleSubmit, reset, formState: { errors }, } = useForm();
+  const fetchUsers = () => {
     api.get("/users")
       .then((response) => {
-        console.log(response.data);
         setUsers(response.data);
       })
-      .catch((error) => {
-        console.log(error);
+      .catch((err) => {
+        console.log(err);
+        setError("Failed to load users. Is the server running?");
+      })
+      .finally(() => {
+        setLoading(false);
       });
+  };
+  useEffect(() => {
+    fetchUsers();
   }, []);
+
+  const onSubmit = (data) => {
+    api.post("/store", data)
+      .then((response) => {
+        console.log(response.data);
+        reset();
+        fetchUsers();
+      })
+     .catch((err) => {
+      console.log(err.response?.data);
+      alert("Failed to add user");
+    });
+  }
+
+  if (loading) return <p>Loading...</p>;
+
+  if (error) return <p style={{ color: "red" }}>{error}</p>;
 
   return (
     <div>
@@ -38,7 +65,40 @@ function App() {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+      
+      <h2>Add User</h2>
+      <form onSubmit={handleSubmit(onSubmit)}>
+      <input
+        placeholder="Name"
+        {...register("name", { required: "Name is required" })}
+      />
+      {errors.name && <p style={{ color: "red" }}>{errors.name.message}</p>}
+
+      <input
+        placeholder="Phone"
+        {...register("phone", { required: "Phone is required" })}
+      />
+      {errors.phone && <p style={{ color: "red" }}>{errors.phone.message}</p>}
+
+      <input
+        placeholder="Email"
+        {...register("email", { required: "Email is required" })}
+      />
+      {errors.email && <p style={{ color: "red" }}>{errors.email.message}</p>}
+
+      <input
+        type="password"
+        placeholder="Password"
+        {...register("password", {
+          required: "Password is required",
+          minLength: { value: 6, message: "At least 6 characters" },
+        })}
+      />
+      {errors.password && <p style={{ color: "red" }}>{errors.password.message}</p>}
+
+      <button type="submit">Add</button>
+      </form>
   </div>
   );
 }
